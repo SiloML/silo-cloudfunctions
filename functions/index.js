@@ -64,7 +64,7 @@ exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
   const requests = await admin.firestore().doc('/projects/' + project_key).get()["list_of_requests"];
   approved_datasets = [];
   for each (var data_request in requests) {
-    curr = await admin.firestore().doc('/requests/' + data_request).get();
+    curr = await admin.firestore().doc(data_request).get();
     if (curr["status"] === "Approved") {
       approved_datasets.push(curr["dataset_id"]);
     }
