@@ -58,6 +58,24 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
   res.status(200).send(token);
   // [END adminSdkPush]
 });
+
+exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
+  const project_key = req.query.project_key;
+  const requests = await admin.firestore().doc('/projects/' + project_key).get()["list_of_requests"];
+  approved_datasets = [];
+  for each (var data_request in requests) {
+    curr = await admin.firestore().doc('/requests/' + data_request).get();
+    if (curr["status"] === "Approved") {
+      approved_datasets.push(curr["dataset_id"]);
+    }
+  }
+  //now all the approved datasets are collected, need to generate tokens for them and add records to Firebase
+  for each (var dataset in approved_datasets) {
+    const token = generateOTP();
+    const snapshot = await admin.firestore().doc('/researcher-tokens/' + token)
+                                .set({dataset_id: dataset});
+  }
+});
 // [END addMessage]
 
 // [START makeUppercase]
