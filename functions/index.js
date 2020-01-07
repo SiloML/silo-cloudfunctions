@@ -52,8 +52,8 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
   // Come up with OTP token
   const token = generateOTP();
   // [START adminSdkPush]
-  const snapshot = await admin.firestore().doc('/datasets/' + dataset_id)
-                              .set({connection_token: token}, {merge: true});
+  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
+  datasetRef.update({OTP: token});
 
   res.status(200).send(token);
   // [END adminSdkPush]
