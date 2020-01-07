@@ -61,7 +61,6 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
 
 exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
   const project_key = req.query.project_key;
-<<<<<<< HEAD
   var requests;
   await admin.firestore().doc('/projects/' + project_key).get().then(doc => {
     if (doc && doc.exists) {
@@ -88,22 +87,19 @@ exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
     }
   }
 
-=======
-  const requests = await admin.firestore().doc('/projects/' + project_key).get()["list_of_requests"];
-  approved_datasets = [];
-  for each (var data_request in requests) {
-    curr = await admin.firestore().doc(data_request).get();
-    if (curr["status"] === "Approved") {
-      approved_datasets.push(curr["dataset_id"]);
+});
+
+exports.verifyResearcherToken = functions.https.onRequest(async (req, res) => {
+  const token = req.query.token;
+  const dataset = req.query.dataset;
+  await admin.firestore().doc('/researcher-tokens/' + token).get().then(doc => {
+    if (!doc || !doc.exists || doc.data().dataset_id !== dataset) {
+      res.status(400).send();
+      return;
     }
-  }
-  //now all the approved datasets are collected, need to generate tokens for them and add records to Firebase
-  for each (var dataset in approved_datasets) {
-    const token = generateOTP();
-    const snapshot = await admin.firestore().doc('/researcher-tokens/' + token)
-                                .set({dataset_id: dataset});
-  }
->>>>>>> f1fe412dc1cb46cfe5f2a447d512fdb5bc11a9df
+  });
+  await admin.firestore().doc('/researcher-tokens/' + token).delete();
+  res.status(200).send();
 });
 // [END addMessage]
 
