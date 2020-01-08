@@ -15,15 +15,18 @@
  */
 'use strict';
 
-// [START all]
-// [START import]
 // The Cloud Functions for Firebase SDK to create Cloud Functions and setup triggers.
 const functions = require('firebase-functions');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const admin = require('firebase-admin');
 admin.initializeApp();
-// [END import]
+
+const connection_statuses = {
+  planned: 'planned', // unconnected
+  available: 'available', // owner registered device w OTP, tornado knows connected
+  unavailable: 'unavailable', // connection is in use
+}
 
 // Function to generate OTP from
 // https://www.geeksforgeeks.org/javascript-program-to-generate-one-time-password-otp/
@@ -40,23 +43,22 @@ function generateOTP() {
     return OTP;
 }
 
-// [START registerDevice]
-// For device to take dataset_id (passed to HTTP endpoint) come up with token,
-// and insert it into the Firestore under the path /messages/:pushId/original
-// [START addMessageTrigger]
 exports.registerDevice = functions.https.onRequest(async (req, res) => {
-// [END addMessageTrigger]
   // Grab the text parameter.
   const dataset_id = req.query.dataset_id;
-  // TODO: Check connection_status is unconnected.
+  // TODO: Check connection_status is 'planned'.
+  await admin.firestore().doc('/datasets/' + dataset_id).get().then(doc => {
+    if (!doc || !doc.exists || doc.data().connection_status !== connection_statuses.planned) {
+      res.status(400).send();
+      return;
+    }
+  });
   // Come up with OTP token
   const token = generateOTP();
-  // [START adminSdkPush]
   const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
   datasetRef.update({OTP: token});
 
   res.status(200).send(token);
-  // [END adminSdkPush]
 });
 
 //After data owner script accepts the dataset id and gets the OTP, the user puts this otp
@@ -97,9 +99,30 @@ exports.verifyOwnerToken = functions.https.onRequest(async (req, res) => {
   res.status(200).send(dataset);
 });
 
+exports.disconnectDevice = functions.https.onRequest(async (req, res) => {
+  // Grab the dataset_id parameter.
+  const dataset_id = req.query.dataset_id;
+  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
+  datasetRef.update({connection_status: connection_statuses.planned});
+})
+
+exports.setDeviceAsUnavailable = functions.https.onRequest(async (req, res) => {
+  // Grab the dataset_id parameter.
+  const dataset_id = req.query.dataset_id;
+  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
+  datasetRef.update({connection_status: connection_statuses.unavailable});
+})
+
+exports.setDeviceAsAvailable = functions.https.onRequest(async (req, res) => {
+  // Grab the dataset_id parameter.
+  const dataset_id = req.query.dataset_id;
+  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
+  datasetRef.update({connection_status: connection_statuses.available});
+})
 
 //called when the researcher enters their api key (project key) into the jupyter notebook
 //finds all the approved requests for this project and creates and sends connection tokens for them
+
 exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
   const project_key = req.query.project_key;
   var requests;
@@ -149,21 +172,3 @@ exports.verifyResearcherToken = functions.https.onRequest(async (req, res) => {
   await admin.firestore().doc('/researcher-tokens/' + token).delete();
   res.status(200).send();
 });
-// [END addMessage]
-
-// [START makeUppercase]
-// Listens for new messages added to /messages/:pushId/original and creates an
-// uppercase version of the message to /messages/:pushId/uppercase
-// exports.makeUppercase = functions.database.ref('/messages/{pushId}/original')
-//     .onCreate((snapshot, context) => {
-//       // Grab the current value of what was written to the Realtime Database.
-//       const original = snapshot.val();
-//       console.log('Uppercasing', context.params.pushId, original);
-//       const uppercase = original.toUpperCase();
-//       // You must return a Promise when performing asynchronous tasks inside a Functions such as
-//       // writing to the Firebase Realtime Database.
-//       // Setting an "uppercase" sibling in the Realtime Database returns a Promise.
-//       return snapshot.ref.parent.child('uppercase').set(uppercase);
-//     });
-// [END makeUppercase]
-// [END all]
