@@ -49,7 +49,7 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
   // TODO: Check connection_status is 'planned'.
   await admin.firestore().doc('/datasets/' + dataset_id).get().then(doc => {
     if (!doc || !doc.exists || doc.data().connection_status !== connection_statuses.planned) {
-      res.status(400).send();
+      res.status(400).send('FAILED');
       return;
     }
   });
@@ -105,22 +105,37 @@ exports.verifyOwnerToken = functions.https.onRequest(async (req, res) => {
 exports.disconnectDevice = functions.https.onRequest(async (req, res) => {
   // Grab the dataset_id parameter.
   const dataset_id = req.query.dataset_id;
-  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
-  datasetRef.update({connection_status: connection_statuses.planned});
+  await admin.firestore().doc('/datasets/' + dataset_id)
+    .update({connection_status: connection_statuses.planned})
+    .catch(function(error) {
+        res.status(404).send('FAIL');
+        return;
+    });
+  res.status(200).send('OK');
 })
 
 exports.setDeviceAsUnavailable = functions.https.onRequest(async (req, res) => {
   // Grab the dataset_id parameter.
   const dataset_id = req.query.dataset_id;
-  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
-  datasetRef.update({connection_status: connection_statuses.unavailable});
+  await admin.firestore().doc('/datasets/' + dataset_id)
+    .update({connection_status: connection_statuses.unavailable})
+    .catch(function(error) {
+        res.status(404).send('FAIL');
+        return;
+    });
+  res.status(200).send('OK');
 })
 
 exports.setDeviceAsAvailable = functions.https.onRequest(async (req, res) => {
   // Grab the dataset_id parameter.
   const dataset_id = req.query.dataset_id;
-  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
-  datasetRef.update({connection_status: connection_statuses.available});
+  await admin.firestore().doc('/datasets/' + dataset_id)
+    .update({connection_status: connection_statuses.available})
+    .catch(function(error) {
+        res.status(404).send('FAIL');
+        return;
+    });
+  res.status(200).send('OK');
 })
 
 //called when the researcher enters their api key (project key) into the jupyter notebook
