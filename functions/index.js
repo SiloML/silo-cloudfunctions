@@ -59,6 +59,47 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
   // [END adminSdkPush]
 });
 
+//After data owner script accepts the dataset id and gets the OTP, the user puts this otp
+//into their front-end which triggers this api
+exports.verifyOwnerOTP = functions.https.onRequest(async (req, res) => {
+  const otp = req.query.otp;
+  const dataset = req.query.dataset_id;
+  var result = true;
+  await admin.firestore().doc('/datasets/' + dataset).get().then(doc => {
+    if (!doc || !doc.exists || doc.data().otp !== otp) {
+      result = false;
+    }
+  });
+  let docRef = admin.firestore().doc('/datasets/' + dataset);
+  docRef.update({
+    otp: firebase.firestore.FieldValue.delete()
+  });
+  if (!result) {
+    res.status(400).send();
+    return;
+  }
+  const connectionToken = generateOTP();
+  await admin.firestore().doc('/owner-tokens/' + ownerToken).set({dataset_id: dataset});
+  res.status(200).send(connectionToken);
+});
+
+//verifies the connection token that the data owner uses to connec to tornado
+exports.verifyOwnerToken = functions.https.onRequest(async (req, res) => {
+  const token = req.query.token;
+  const dataset = req.query.dataset;
+  await admin.firestore().doc('/owner-tokens/' + token).get().then(doc => {
+    if (!doc || !doc.exists || doc.data().dataset_id !== dataset) {
+      res.status(400).send();
+      return;
+    }
+  });
+  await admin.firestore().doc('/owner-tokens/' + token).delete();
+  res.status(200).send(dataset);
+});
+
+
+//called when the researcher enters their api key (project key) into the jupyter notebook
+//finds all the approved requests for this project and creates and sends connection tokens for them
 exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
   const project_key = req.query.project_key;
   var requests;
@@ -94,6 +135,8 @@ exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
   }
 });
 
+//Researcher api provides these tokens and requested dataset when connecting to Tornado,
+//Tornado calls this api to verify that it was valid request and then queues it, and removes the token.
 exports.verifyResearcherToken = functions.https.onRequest(async (req, res) => {
   const token = req.query.token;
   const dataset = req.query.dataset;
