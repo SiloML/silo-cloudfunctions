@@ -67,26 +67,31 @@ exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
       requests = doc.data()["list_of_requests"];
     }
   });
-  for (var i = 0; i < requests.length; i++) {
-    const data_request = requests[i];
-    var curr;
-    await admin.firestore().doc("/" + data_request.path).get().then(doc => {
-      if (doc && doc.exists) {
-        curr = doc.data();
+  if (requests.length == 0) {
+    res.status(404).send();
+  } else {
+    var tokenMap;
+    for (var i = 0; i < requests.length; i++) {
+      const data_request = requests[i];
+      var curr;
+      await admin.firestore().doc("/" + data_request.path).get().then(doc => {
+        if (doc && doc.exists) {
+          curr = doc.data();
+        }
+      });
+      console.log("got");
+      console.log(curr);
+      if (curr["status"] === "Approved") {
+        console.log("approved");
+        const token = generateOTP();
+        const id = curr["dataset_id"];
+        console.log(id);
+        const snapshot = await admin.firestore().doc('/researcher-tokens/' + token).set({dataset_id: id});
+        tokenMap[token] = id;
       }
-    });
-    console.log("got");
-    console.log(curr);
-    if (curr["status"] === "Approved") {
-      console.log("approved");
-      const token = generateOTP();
-      const snapshot = await admin.firestore().doc('/researcher-tokens/' + token).set({dataset_id: curr["dataset_id"]});
-      res.status(200).send();
-    } else {
-      res.status(404).send();
     }
+    res.status(200).send(tokenMap);
   }
-
 });
 
 exports.verifyResearcherToken = functions.https.onRequest(async (req, res) => {
