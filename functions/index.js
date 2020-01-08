@@ -98,6 +98,8 @@ exports.verifyOwnerToken = functions.https.onRequest(async (req, res) => {
   });
   if (result) {
     await admin.firestore().doc('/owner-tokens/' + token).delete();
+    const datasetRef = await admin.firestore().doc('/datasets/' + dataset)
+    datasetRef.update({connection_status: connection_statuses.available});
     res.status(200).send(dataset);
   }
 });
