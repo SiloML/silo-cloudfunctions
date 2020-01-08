@@ -110,7 +110,7 @@ exports.disconnectDevice = functions.https.onRequest(async (req, res) => {
   await admin.firestore().doc('/datasets/' + dataset_id)
     .update({connection_status: connection_statuses.planned})
     .catch(function(error) {
-        res.status(404).send('FAIL');
+        res.status(404).send(error);
         return;
     });
   res.status(200).send('OK');
@@ -122,7 +122,7 @@ exports.setDeviceAsUnavailable = functions.https.onRequest(async (req, res) => {
   await admin.firestore().doc('/datasets/' + dataset_id)
     .update({connection_status: connection_statuses.unavailable})
     .catch(function(error) {
-        res.status(404).send('FAIL');
+        res.status(404).send(error);
         return;
     });
   res.status(200).send('OK');
@@ -134,7 +134,7 @@ exports.setDeviceAsAvailable = functions.https.onRequest(async (req, res) => {
   await admin.firestore().doc('/datasets/' + dataset_id)
     .update({connection_status: connection_statuses.available})
     .catch(function(error) {
-        res.status(404).send('FAIL');
+        res.status(404).send(error);
         return;
     });
   res.status(200).send('OK');
