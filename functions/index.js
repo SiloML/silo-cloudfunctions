@@ -68,20 +68,20 @@ exports.verifyOwnerOTP = functions.https.onRequest(async (req, res) => {
   const dataset = req.query.dataset_id;
   var result = true;
   await admin.firestore().doc('/datasets/' + dataset).get().then(doc => {
-    if (!doc || !doc.exists || doc.data().otp !== otp) {
+    if (!doc || !doc.exists || doc.data().OTP !== otp) {
       result = false;
     }
   });
   let docRef = admin.firestore().doc('/datasets/' + dataset);
   docRef.update({
-    otp: firebase.firestore.FieldValue.delete()
+    OTP: admin.firestore.FieldValue.delete()
   });
   if (!result) {
     res.status(400).send();
     return;
   }
   const connectionToken = generateOTP();
-  await admin.firestore().doc('/owner-tokens/' + ownerToken).set({dataset_id: dataset});
+  const snapshot = await admin.firestore().doc('/owner-tokens/' + connectionToken).set({dataset_id: dataset});
   res.status(200).send(connectionToken);
 });
 
@@ -89,14 +89,17 @@ exports.verifyOwnerOTP = functions.https.onRequest(async (req, res) => {
 exports.verifyOwnerToken = functions.https.onRequest(async (req, res) => {
   const token = req.query.token;
   const dataset = req.query.dataset;
+  var result = true;
   await admin.firestore().doc('/owner-tokens/' + token).get().then(doc => {
     if (!doc || !doc.exists || doc.data().dataset_id !== dataset) {
       res.status(400).send();
-      return;
+      result = false;
     }
   });
-  await admin.firestore().doc('/owner-tokens/' + token).delete();
-  res.status(200).send(dataset);
+  if (result) {
+    await admin.firestore().doc('/owner-tokens/' + token).delete();
+    res.status(200).send(dataset);
+  }
 });
 
 exports.disconnectDevice = functions.https.onRequest(async (req, res) => {
@@ -163,12 +166,15 @@ exports.createResearcherTokens = functions.https.onRequest(async (req, res) => {
 exports.verifyResearcherToken = functions.https.onRequest(async (req, res) => {
   const token = req.query.token;
   const dataset = req.query.dataset;
+  var result = true;
   await admin.firestore().doc('/researcher-tokens/' + token).get().then(doc => {
     if (!doc || !doc.exists || doc.data().dataset_id !== dataset) {
       res.status(400).send();
-      return;
+      result = false;
     }
   });
-  await admin.firestore().doc('/researcher-tokens/' + token).delete();
-  res.status(200).send();
+  if (result) {
+    await admin.firestore().doc('/researcher-tokens/' + token).delete();
+    res.status(200).send();
+  }
 });
