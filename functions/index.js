@@ -58,11 +58,11 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
   const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
   datasetRef.update({OTP: token});
 
-  res.status(200).send(token);
+  res.status(200).send();
 });
 
 //After data owner script accepts the dataset id and gets the OTP, the user puts this otp
-//into their front-end which triggers this api
+//into their console which triggers this api
 exports.verifyOwnerOTP = functions.https.onRequest(async (req, res) => {
   const otp = req.query.otp;
   const dataset = req.query.dataset_id;
