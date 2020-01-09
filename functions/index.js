@@ -47,18 +47,22 @@ exports.registerDevice = functions.https.onRequest(async (req, res) => {
   // Grab the text parameter.
   const dataset_id = req.query.dataset_id;
   // TODO: Check connection_status is 'planned'.
+  var result = true;
   await admin.firestore().doc('/datasets/' + dataset_id).get().then(doc => {
     if (!doc || !doc.exists || doc.data().connection_status !== connection_statuses.planned) {
       res.status(400).send();
-      return;
+      result = false;
     }
   });
   // Come up with OTP token
-  const token = generateOTP();
-  const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
-  datasetRef.update({OTP: token});
+  if (result) {
+    const token = generateOTP();
+    const datasetRef = await admin.firestore().doc('/datasets/' + dataset_id)
+    datasetRef.update({OTP: token});
 
-  res.status(200).send();
+    res.status(200).send();
+  }
+
 });
 
 //After data owner script accepts the dataset id and gets the OTP, the user puts this otp
